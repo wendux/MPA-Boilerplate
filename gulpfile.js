@@ -14,7 +14,7 @@ var uglify = require('gulp-uglify');
 var cache = require('gulp-cache');
 var sourcemaps = require('gulp-sourcemaps');
 var browserify = require('gulp-browserify');
-//var util = require("./build_script/utils");
+var changed = require('gulp-changed');
 //var rename = require("gulp-rename")
 var log = console.log.bind(console);
 
@@ -30,6 +30,7 @@ gulp.task("r", ["js:r", "css:r"]);
 function js(type) {
     gulp.task("js" + (type || ""), function () {
         var stream = gulp.src(config.jsSrc)
+            .pipe(changed(config.jsDist))
             .pipe(sourcemaps.init())
             .pipe(babel({
                 presets: ['es2015']
@@ -64,6 +65,7 @@ function css(type) {
     }
     gulp.task('css' + (type || ""), depend, function () {
         return gulp.src(config.cssSrc)
+            .pipe(changed(config.cssDist))
             .pipe(sass())
             .pipe(postcss(processors))
             //.pipe(rename(function (path) {
