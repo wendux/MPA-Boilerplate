@@ -36,10 +36,15 @@ npm run build 或 gulp r
 **目录结构**
 
 src
+
 ​	 — static
+
 ​		—css
+
 ​		—img
+
 ​		—js
+
 dist
 
 src目录下是源代码文件夹，所有的页面对应一个html文件，在src根目录下，js、css文件放在相应目录下，在html中引入即可。下面有两点要注意：
