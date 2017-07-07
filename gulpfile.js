@@ -7,7 +7,6 @@ var postcss = require("gulp-postcss")
 var autoprefixer = require('autoprefixer')
 var postasset = require("postcss-assets")
 var cssnano = require('cssnano')
-var webpack = require("webpack");
 var imagemin = require('gulp-imagemin');
 var pngquant = require('imagemin-pngquant');
 var uglify = require('gulp-uglify');
@@ -15,17 +14,37 @@ var cache = require('gulp-cache');
 var sourcemaps = require('gulp-sourcemaps');
 var browserify = require('gulp-browserify');
 var changed = require('gulp-changed');
-//var rename = require("gulp-rename")
+var runSequence = require('run-sequence');
+livereload = require('gulp-livereload');
+var rev = require('gulp-rev')
+var revCollector = require('gulp-rev-collector');
 var log = console.log.bind(console);
+require('shelljs/global')
 
-//注册任务
+gulp.task('d', function () {
+    livereload.listen();
+    gulp.watch('src/**/*.*', function (file) {
+        log("File " + file.path + " changed!");
+        if (file.path.endsWith(".scss")) {
+            gulp.run("css")
+        } else if (file.path.endsWith(".jsx")) {
+            gulp.run("js")
+        } else {
+            livereload.changed(file.path);
+        }
+    })
+    log("     ***** Watching " + "[crtl+c to stop.] ******     ");
+});
+
+gulp.task('r', function (callback) {
+    rm('-rf', config.distRoot)
+    runSequence(["js:r", "css:r"], "revCss", "revJs", callback)
+});
 css()
 css(":r")
 js()
 js(":r")
 gulp.task("default", ["r"]);
-gulp.task("d", ["js", "css"]);
-gulp.task("r", ["js:r", "css:r"]);
 
 function js(type) {
     gulp.task("js" + (type || ""), function () {
@@ -39,13 +58,15 @@ function js(type) {
                 debug: false
             }))
         if (type == ":r") {
-            stream = stream.pipe(uglify({
-                compress: {warnings: true}
-            }));
+            stream = stream.pipe(uglify({compress: {warnings: true}}))
+                .pipe(sourcemaps.write("./sources_maps"))
+                .pipe(rev())
+                .pipe(gulp.dest(config.jsDist))
+                .pipe(rev.manifest())
+                .pipe(gulp.dest('./rev/js'))
+        } else {
+            stream.pipe(gulp.dest("./src/static/js"))
         }
-        stream = stream.pipe(sourcemaps.write("./sources_maps"))
-            .pipe(gulp.dest(config.jsDist));
-
         return stream;
     });
 }
@@ -64,16 +85,25 @@ function css(type) {
         depend[0] = "img"
     }
     gulp.task('css' + (type || ""), depend, function () {
-        return gulp.src(config.cssSrc)
+        var stream = gulp.src(config.cssSrc)
             .pipe(changed(config.cssDist))
             .pipe(sass())
             .pipe(postcss(processors))
-            //.pipe(rename(function (path) {
-            //    path.extname = ".css"
-            //}))
-            .pipe(gulp.dest(config.cssDist));
+        //.pipe(rename(function (path) {
+        //    path.extname = ".css"
+        //}))
+
+        if (type == ":r") {
+            stream.pipe(rev())
+                .pipe(gulp.dest(config.cssDist))
+                .pipe(rev.manifest())
+                .pipe(gulp.dest('./rev/css'));
+        } else {
+            stream.pipe(gulp.dest("./src/static/css"))
+        }
     });
 }
+
 
 gulp.task('img', function () {
     gulp.src(config.imgSrc)
@@ -85,19 +115,21 @@ gulp.task('img', function () {
         .pipe(gulp.dest(config.imgDist));
 });
 
+gulp.task('revCss', function () {
+    return gulp.src(['./rev/css/*.json', './src/*.html'])
+        .pipe(revCollector())                         //替换html中对应的记录
+        .pipe(gulp.dest(config.distRoot));
+});
+gulp.task('revJs', function () {
+    return gulp.src(['./rev/js/*.json', config.distRoot+"*.html"])
+        .pipe(revCollector())
+        .pipe(gulp.dest(config.distRoot));
+});
+
 gulp.task('img:clear', function (done) {
     return cache.clearAll(done);
 });
-gulp.task('w', function () {
-    var watcher = gulp.watch(config.cssSrc, ['css']);
-    log("watching " + config.cssSrc
-        + "... [crtl+c to stop.]");
-    watcher.on('change', function (event) {
-       log(JSON.stringify(event));
-        log('File ' + event.path + ' was '
-            + event.type + ', running tasks...');
-    });
-});
+
 
 
 
