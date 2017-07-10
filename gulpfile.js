@@ -19,6 +19,7 @@ livereload = require('gulp-livereload');
 var rev = require('gulp-rev')
 var revCollector = require('gulp-rev-collector');
 var log = console.log.bind(console);
+var prefix = require('gulp-prefix');
 require('shelljs/global')
 
 gulp.task('d', function () {
@@ -120,9 +121,16 @@ gulp.task('revCss', function () {
         .pipe(revCollector())                         //替换html中对应的记录
         .pipe(gulp.dest(config.distRoot));
 });
+
 gulp.task('revJs', function () {
     return gulp.src(['./rev/js/*.json', config.distRoot+"*.html"])
         .pipe(revCollector())
+        .pipe(gulp.dest(config.distRoot));
+});
+
+gulp.task('prefix', function(){
+    gulp.src(config.distRoot+"*.html")
+        .pipe(prefix(config.cdnUrl, null, '{{'))
         .pipe(gulp.dest(config.distRoot));
 });
 
